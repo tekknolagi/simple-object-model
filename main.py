@@ -56,5 +56,11 @@ class Tests(unittest.TestCase):
         self.assertEqual(obj.read_attr("a"), 2)
         self.assertEqual(obj.read_attr("b"), 5)
 
+    def test_read_write_field_class(self):
+        A = Class(name="A", base_class=OBJECT, fields={"a": 1}, metaclass=TYPE)
+        self.assertEqual(A.read_attr("a"), 1)
+        A.write_attr("a", 5)
+        self.assertEqual(A.read_attr("a"), 5)
+
 if __name__ == '__main__':
     unittest.main()
