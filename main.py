@@ -28,7 +28,24 @@ MISSING = object()
 
 class Instance(Base):
     def __init__(self, cls: Class):
-        super().__init__(cls, {})
+        super().__init__(cls, None)
+        self.map = EMPTY_MAP
+        self.storage = []
+
+    def _read_dict(self, fieldname):
+        index = self.map.get_index(fieldname)
+        if index == -1:
+            return MISSING
+        return self.storage[index]
+
+    def _write_dict(self, fieldname, value):
+        index = self.map.get_index(fieldname)
+        if index != -1:
+            self.storage[index] = value
+        else:
+            new_map = self.map.next_map(fieldname)
+            self.storage.append(value)
+            self.map = new_map
 
 class Class(Base):
     def __init__(self, name, base_class, fields, metaclass):
@@ -48,6 +65,25 @@ OBJECT = Class(name="object", base_class=None, fields={}, metaclass=None)
 TYPE = Class(name="type", base_class=OBJECT, fields={}, metaclass=None)
 TYPE.cls = TYPE
 OBJECT.cls = TYPE
+
+class Map:
+    def __init__(self, attrs):
+        self.attrs = attrs
+        self.next_maps = {}
+
+    def get_index(self, fieldname):
+        return self.attrs.get(fieldname, -1)
+
+    def next_map(self, fieldname):
+        assert fieldname not in self.attrs
+        if fieldname in self.next_maps:
+            return self.next_maps[fieldname]
+        attrs = self.attrs.copy()
+        attrs[fieldname] = len(attrs)
+        result = self.next_maps[fieldname] = Map(attrs)
+        return result
+
+EMPTY_MAP = Map({})
 
 class Tests(unittest.TestCase):
     def test_read_write_field(self):
@@ -78,6 +114,32 @@ class Tests(unittest.TestCase):
         self.assertTrue(b.isinstance(A))
         self.assertTrue(b.isinstance(OBJECT))
         self.assertFalse(b.isinstance(TYPE))
+
+    def test_maps(self):
+        Point = Class(name="Point", base_class=OBJECT, fields={}, metaclass=TYPE)
+        p1 = Instance(Point)
+        p1.write_attr("x", 1)
+        p1.write_attr("y", 2)
+        self.assertEqual(p1.storage, [1, 2])
+        self.assertEqual(p1.map.attrs, {"x": 0, "y": 1})
+
+        p2 = Instance(Point)
+        p2.write_attr("x", 5)
+        p2.write_attr("y", 6)
+        self.assertIs(p1.map, p2.map)
+        self.assertEqual(p2.storage, [5, 6])
+
+        p1.write_attr("x", -1)
+        p1.write_attr("y", -2)
+        self.assertIs(p1.map, p2.map)
+        self.assertEqual(p1.storage, [-1, -2])
+
+        p3 = Instance(Point)
+        p3.write_attr("x", 100)
+        p3.write_attr("z", -343)
+        self.assertIsNot(p3.map, p1.map)
+        self.assertEqual(p3.map.attrs, {"x": 0, "z": 1})
+
 
 if __name__ == '__main__':
     unittest.main()
