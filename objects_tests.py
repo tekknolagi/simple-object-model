@@ -1,5 +1,5 @@
 import unittest
-from main import Class, OBJECT, TYPE, Instance, InstanceWithMap
+from objects import Class, OBJECT, TYPE, Instance, InstanceWithMap
 
 class Tests(unittest.TestCase):
     def test_read_write_field(self):

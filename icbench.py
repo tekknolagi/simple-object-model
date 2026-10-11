@@ -1,5 +1,5 @@
 import timeit
-from main import Class, OBJECT, TYPE, Instance, InstanceWithMap, MISSING
+from objects import Class, OBJECT, TYPE, Instance, InstanceWithMap, MISSING
 
 Point = Class(name="Point", base_class=OBJECT, fields={}, metaclass=TYPE)
 P = Instance(Point)
