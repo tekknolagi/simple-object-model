@@ -36,6 +36,14 @@ class Class(Base):
         self.name = name
         self.base_class = base_class
 
+    def method_resolution_order(self):
+        if self.base_class is None:
+            return [self]
+        return [self] + self.base_class.method_resolution_order()
+
+    def issubclass(self, cls):
+        return cls in self.method_resolution_order()
+
 OBJECT = Class(name="object", base_class=None, fields={}, metaclass=None)
 TYPE = Class(name="type", base_class=OBJECT, fields={}, metaclass=None)
 TYPE.cls = TYPE
@@ -61,6 +69,15 @@ class Tests(unittest.TestCase):
         self.assertEqual(A.read_attr("a"), 1)
         A.write_attr("a", 5)
         self.assertEqual(A.read_attr("a"), 5)
+
+    def test_isinstance(self):
+        A = Class(name="A", base_class=OBJECT, fields={}, metaclass=TYPE)
+        B = Class(name="B", base_class=A, fields={}, metaclass=TYPE)
+        b = Instance(B)
+        self.assertTrue(b.isinstance(B))
+        self.assertTrue(b.isinstance(A))
+        self.assertTrue(b.isinstance(OBJECT))
+        self.assertFalse(b.isinstance(TYPE))
 
 if __name__ == '__main__':
     unittest.main()
