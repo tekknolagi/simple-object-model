@@ -22,7 +22,12 @@ MISSING = object()
 
 class Instance(Base):
     def __init__(self, cls: Class):
-        super().__init__(cls, None)
+        super().__init__(cls, {})
+        self.map = None
+
+class InstanceWithMap(Instance):
+    def __init__(self, cls: Class):
+        super().__init__(cls)
         self.map = EMPTY_MAP
         self.storage = []
 
@@ -94,13 +99,13 @@ class Tests(unittest.TestCase):
 
     def test_maps(self):
         Point = Class(name="Point", base_class=OBJECT, fields={}, metaclass=TYPE)
-        p1 = Instance(Point)
+        p1 = InstanceWithMap(Point)
         p1.write_attr("x", 1)
         p1.write_attr("y", 2)
         self.assertEqual(p1.storage, [1, 2])
         self.assertEqual(p1.map.attrs, {"x": 0, "y": 1})
 
-        p2 = Instance(Point)
+        p2 = InstanceWithMap(Point)
         p2.write_attr("x", 5)
         p2.write_attr("y", 6)
         self.assertIs(p1.map, p2.map)
@@ -111,7 +116,7 @@ class Tests(unittest.TestCase):
         self.assertIs(p1.map, p2.map)
         self.assertEqual(p1.storage, [-1, -2])
 
-        p3 = Instance(Point)
+        p3 = InstanceWithMap(Point)
         p3.write_attr("x", 100)
         p3.write_attr("z", -343)
         self.assertIsNot(p3.map, p1.map)
@@ -119,17 +124,60 @@ class Tests(unittest.TestCase):
 
     def test_different_class_has_same_map(self):
         Point = Class(name="Point", base_class=OBJECT, fields={}, metaclass=TYPE)
-        p = Instance(Point)
+        p = InstanceWithMap(Point)
         p.write_attr("x", 1)
         p.write_attr("y", 2)
         self.assertEqual(p.map.attrs, {"x": 0, "y": 1})
 
         Vec2 = Class(name="Vec2", base_class=OBJECT, fields={}, metaclass=TYPE)
 
-        v = Instance(Vec2)
+        v = InstanceWithMap(Vec2)
         v.write_attr("x", 5)
         v.write_attr("y", 6)
         self.assertIs(p.map, v.map)
 
+import timeit
+
+Point = Class(name="Point", base_class=OBJECT, fields={}, metaclass=TYPE)
+P = Instance(Point)
+
+def read_attr():
+    P.read_attr("x")
+
+P = InstanceWithMap(Point)
+P.write_attr("x", 5)
+P.write_attr("y", 6)
+NO_MAP = object()
+CACHED_MAP = P.map
+
+class InlineCache:
+    __slots__ = ("map", "idx")
+
+    def __init__(self):
+        self.map = NO_MAP
+        self.idx = None
+
+    def read(self, obj, fieldname):
+        if obj.map is self.map:
+            return obj.storage[self.idx]
+        result = obj.read_attr(fieldname)
+        if result is MISSING:
+            return MISSING
+        if obj.map is None:
+            return result
+        self.map = obj.map
+        self.idx = obj.map.get_index(fieldname)
+        return result
+
+IC = InlineCache()
+
+def read_attr_cached():
+    IC.read(P, "x")
+
 if __name__ == '__main__':
+    t, *_ = timeit.repeat(read_attr, number=10_000_000, repeat=1)
+    print(f"Without cache: {t:.2}s")
+    t, *_ = timeit.repeat(read_attr_cached, number=10_000_000, repeat=1)
+    print(f"With cache: {t:.2}s")
+
     unittest.main()
