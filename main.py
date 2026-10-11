@@ -1,3 +1,4 @@
+# Based on CF Bolz-Tereick's https://aosabook.org/en/500L/a-simple-object-model.html
 import unittest
 
 class Base:
