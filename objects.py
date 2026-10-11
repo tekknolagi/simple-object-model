@@ -21,12 +21,12 @@ class Base:
 MISSING = object()
 
 class Instance(Base):
-    def __init__(self, cls: Class):
+    def __init__(self, cls: "Class"):
         super().__init__(cls, {})
         self.map = None
 
 class InstanceWithMap(Instance):
-    def __init__(self, cls: Class):
+    def __init__(self, cls: "Class"):
         super().__init__(cls)
         self.map = EMPTY_MAP
         self.storage = []
