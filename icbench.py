@@ -17,20 +17,21 @@ class InlineCache:
     __slots__ = ("map", "idx")
 
     def __init__(self):
-        self.map = NO_MAP
+        self.map = None
         self.idx = None
 
     def read(self, obj, fieldname):
-        if obj.map is self.map:
+        obj_map = obj.map
+        if obj_map is self.map:
             return obj.storage[self.idx]
-        result = obj.read_attr(fieldname)
-        if result is MISSING:
+        if obj_map is None:
+            return obj.read_attr(fieldname)
+        index = obj_map.get_index(fieldname)
+        if index == -1:
             return MISSING
-        if obj.map is None:
-            return result
-        self.map = obj.map
-        self.idx = obj.map.get_index(fieldname)
-        return result
+        self.map = obj_map
+        self.idx = index
+        return obj.storage[index]
 
 IC = InlineCache()
 
